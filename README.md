@@ -2,6 +2,8 @@
 
 **Also available on OpenUserJS: [filters](https://openuserjs.org/scripts/sukhoi191/ChatGPT_cleanup_filters) and [styles](https://openuserjs.org/scripts/sukhoi191/ChatGPT_cleanup_styles)**.
 
+**Check related discussion on community.openai.com [here](https://community.openai.com/t/feature-request-setting-to-disable-follow-up-suggestions/1396688)**.
+
 A pair of userscripts for cleaning up the ChatGPT web interface. One hides unwanted interface elements; the other gives the mobile website an Android-app-inspired layout.
 
 The scripts work independently, so you can install either one or both.

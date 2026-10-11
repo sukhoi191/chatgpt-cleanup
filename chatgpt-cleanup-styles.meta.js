@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT cleanup styles
 // @namespace    https://github.com/sukhoi191/chatgpt-cleanup
-// @version      1.0.0
+// @version      1.1.0
 // @author       sukhoi191
 // @license      MIT
 // @updateURL    https://raw.githubusercontent.com/sukhoi191/chatgpt-cleanup/refs/heads/main/chatgpt-cleanup-styles.meta.js

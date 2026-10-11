@@ -1,5 +1,7 @@
 # ChatGPT Cleanup
 
+**Also available on OpenUserJS: [filters](https://openuserjs.org/scripts/sukhoi191/ChatGPT_cleanup_filters) and [styles](https://openuserjs.org/scripts/sukhoi191/ChatGPT_cleanup_styles)**.
+
 A pair of userscripts for cleaning up the ChatGPT web interface. One hides unwanted interface elements; the other gives the mobile website an Android-app-inspired layout.
 
 The scripts work independently, so you can install either one or both.

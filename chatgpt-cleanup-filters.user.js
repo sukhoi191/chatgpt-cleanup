@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT cleanup filters
 // @namespace    https://github.com/sukhoi191/chatgpt-cleanup
-// @version      1.0.1
+// @version      1.0.2
 // @author       sukhoi191
 // @license      MIT
 // @updateURL    https://raw.githubusercontent.com/sukhoi191/chatgpt-cleanup/refs/heads/main/chatgpt-cleanup-filters.meta.js
@@ -73,7 +73,7 @@ const FILTER_RULES = [
   },
   {
     "group": "followUps",
-    "selector": "span[role=\"button\"]",
+    "selector": "span[role=\"button\"]:is([class~=\"group/followup-citation\"],[class~=\"entity-underline\"])",
     "xpath": "ancestor::ul[1][.//span[contains(concat(' ', normalize-space(@class), ' '), ' group/followup-citation ')] or (@data-is-only-node and @data-is-last-node and .//span[contains(concat(' ', normalize-space(@class), ' '), ' entity-underline ')])]/preceding-sibling::*[1][self::p]/preceding-sibling::*[1]",
     "style": "margin-bottom:0 !important"
   },
@@ -150,9 +150,11 @@ styleElement.id = 'vm-chatgpt-cleanup-filters';
 styleElement.textContent = cssRules.join('\n');
 let marked = new Map();
 const failedRules = new Set();
+// Combined selector of all working procedural rules, used to spot new matches cheaply.
+let anchorSelector = '';
 
-function evaluate(rule) {
-    let elements = new Set(document.querySelectorAll(rule.selector));
+function evaluate(rule, matches) {
+    let elements = new Set(matches);
     for (const step of rule.steps) {
         const next = new Set();
         for (const element of elements) {
@@ -173,20 +175,30 @@ function evaluate(rule) {
     return elements;
 }
 
-function reconcile() {
+function attachStyles() {
     if (!styleElement.isConnected && document.documentElement) {
         (document.head || document.documentElement).appendChild(styleElement);
     }
+}
+
+function reconcile() {
+    attachStyles();
     const next = new Map();
+    // Several rules share a selector; query each one once per pass.
+    const queried = new Map();
     for (const rule of procedural) {
         if (failedRules.has(rule.id)) continue;
         try {
-            for (const element of evaluate(rule)) {
+            if (!queried.has(rule.selector)) queried.set(rule.selector, document.querySelectorAll(rule.selector));
+            const matches = queried.get(rule.selector);
+            if (!matches.length) continue;
+            for (const element of evaluate(rule, matches)) {
                 if (!next.has(element)) next.set(element, []);
                 next.get(element).push(rule.id);
             }
         } catch (error) {
             failedRules.add(rule.id);
+            anchorSelector = '';
             console.error('[ChatGPT cleanup] Invalid filter:', rule.selector, error);
         }
     }
@@ -198,6 +210,9 @@ function reconcile() {
         if (element.getAttribute(attribute) !== value) element.setAttribute(attribute, value);
     }
     marked = next;
+    if (!anchorSelector) {
+        anchorSelector = [...new Set(procedural.filter(rule => !failedRules.has(rule.id)).map(rule => rule.selector))].join(',');
+    }
 }
 
 let scheduled = false;
@@ -208,14 +223,35 @@ function schedule() {
     setTimeout(() => {
         scheduled = false;
         reconcile();
-    }, 50);
+    }, 100);
+}
+
+function addsAnchor(records) {
+    if (!anchorSelector) return false;
+    for (const record of records) {
+        for (const node of record.addedNodes) {
+            if (node.nodeType === Node.ELEMENT_NODE
+                && (node.matches(anchorSelector) || node.querySelector(anchorSelector))) return true;
+        }
+    }
+    return false;
 }
 
 const observer = new MutationObserver(records => {
-    // Our own markers must not trigger another full DOM scan.
-    if (records.some(record => record.type !== 'attributes' || record.attributeName !== attribute)) schedule();
+    if (!procedural.length) return attachStyles();
+    // Observer callbacks run before paint, so hiding new matches here avoids a flash.
+    // Other changes (siblings rendered later, attribute updates) are batched.
+    if (addsAnchor(records)) reconcile();
+    else schedule();
 });
-observer.observe(document, { subtree: true, childList: true, attributes: true, characterData: true });
+// Watch only attributes that rule selectors depend on: ChatGPT updates inline
+// styles on every animation frame and text on every streamed token.
+observer.observe(document, {
+    subtree: true,
+    childList: true,
+    attributes: true,
+    attributeFilter: ['class', 'role', 'aria-pressed', 'data-is-only-node', 'data-is-last-node'],
+});
 reconcile();
 
 })();
